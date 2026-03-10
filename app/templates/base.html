@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEDOS PRO | {{ title or 'Система управления' }}</title>
+
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --sidebar-width: 270px;
+            --bg-main: #f8fafc;
+            --sidebar-dark: #0f172a;
+            --accent-primary: #0061ff;
+            --accent-glow: #00d4ff;
+            --text-main: #1e293b;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Manrope', sans-serif;
+            background: radial-gradient(circle at 0% 0%, #e0eaff 0%, transparent 30%), var(--bg-main);
+            margin: 0; min-height: 100vh;
+        }
+
+        /* Закон 8: Overlay */
+        #sidebar-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); z-index: 998;
+        }
+
+        /* Закон 6: Sidebar */
+        #sidebar {
+            width: var(--sidebar-width); height: 96vh; position: fixed; left: 15px; top: 2vh;
+            background: var(--sidebar-dark); border-radius: 24px; display: flex; flex-direction: column;
+            padding: 30px 20px; z-index: 1000; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Закон 7: Adaptive Mobile */
+        @media (max-width: 1100px) {
+            #sidebar { left: -300px; }
+            #sidebar.active { left: 15px; }
+            #sidebar-overlay.active { display: block; }
+            #content { margin-left: 0 !important; padding: 20px !important; }
+            .mobile-header { display: flex !important; }
+        }
+
+        .mobile-header {
+            display: none; align-items: center; justify-content: space-between;
+            padding: 15px 25px; background: #fff; border-bottom: 1px solid #e2e8f0;
+            position: sticky; top: 0; z-index: 990;
+        }
+
+        .brand-section { display: flex; align-items: center; gap: 15px; margin-bottom: 40px; }
+        .brand-logo { 
+            width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-glow));
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 800; font-size: 1.2rem; box-shadow: 0 8px 16px rgba(0, 97, 255, 0.3);
+        }
+
+        .nav-link-medos {
+            display: flex; align-items: center; gap: 12px; padding: 12px 18px;
+            color: #94a3b8; text-decoration: none; border-radius: 14px;
+            font-weight: 600; margin-bottom: 4px; transition: 0.3s;
+        }
+        .nav-link-medos:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+        .nav-link-medos.active { background: linear-gradient(90deg, var(--accent-primary), var(--accent-glow)); color: white; }
+
+        #content { margin-left: calc(var(--sidebar-width) + 40px); padding: 40px 30px; transition: 0.4s; }
+        
+        /* Закон 10: Scannability & Flash Messages */
+        .flash-container { position: fixed; top: 25px; right: 25px; z-index: 2000; min-width: 300px; }
+        .alert { border-radius: 16px; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <header class="mobile-header">
+        <div class="brand-logo" onclick="toggleSidebar()">M</div>
+        <div class="brand-name" style="font-weight:800">MEDOS PRO</div>
+        <button class="btn border-0" onclick="toggleSidebar()"><i class="bi bi-list fs-2"></i></button>
+    </header>
+
+    <nav id="sidebar">
+        <div class="brand-section">
+            <div class="brand-logo">M</div>
+            <div class="brand-name" style="color:white; font-family:'Outfit'; font-weight:800; font-size:1.3rem">
+                MEDOS <span style="color:var(--accent-glow)">PRO</span>
+            </div>
+        </div>
+
+        <div class="nav-menu">
+            {% set n = request.endpoint %}
+            <a href="{{ url_for('main.index') }}" class="nav-link-medos {{ 'active' if n == 'main.index' }}">
+                <i class="bi bi-grid-1x2-fill"></i> Дашборд
+            </a>
+            <a href="{{ url_for('main.index') }}#calendar" class="nav-link-medos">
+                <i class="bi bi-calendar3-range-fill"></i> Календарь
+            </a>
+            <a href="{{ url_for('main.add_patient') }}" class="nav-link-medos {{ 'active' if n == 'main.add_patient' }}">
+                <i class="bi bi-person-plus-fill"></i> Новый пациент
+            </a>
+            <a href="#" class="nav-link-medos">
+                <i class="bi bi-people-fill"></i> База пациентов
+            </a>
+            <a href="#" class="nav-link-medos">
+                <i class="bi bi-bar-chart-line-fill"></i> Финансы
+            </a>
+            <a href="#" class="nav-link-medos">
+                <i class="bi bi-box-seam-fill"></i> Склад (Закон 66)
+            </a>
+        </div>
+
+        <div class="mt-auto">
+            <hr style="border-color: rgba(255,255,255,0.1)">
+            <a href="{{ url_for('auth.logout') if auth else '#' }}" class="nav-link-medos text-danger">
+                <i class="bi bi-box-arrow-left"></i> Выход
+            </a>
+        </div>
+    </nav>
+
+    <main id="content">
+        <!-- Flash Messages (Закон 88) -->
+        <div class="flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Закон 14: Confirm Modal Shell -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 24px;">
+                <div class="modal-body text-center p-5">
+                    <i class="bi bi-exclamation-triangle text-warning display-1"></i>
+                    <h3 class="mt-4 fw-bold">Вы уверены?</h3>
+                    <p class="text-muted">Это действие может повлиять на финансовую отчетность.</p>
+                    <div class="d-flex gap-3 justify-content-center mt-4">
+                        <button class="btn btn-light px-4" data-bs-dismiss="modal">Отмена</button>
+                        <a id="confirmActionBtn" class="btn btn-danger px-4">Подтвердить</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('sidebar-overlay').classList.toggle('active');
+        }
+
+        // Закон 14: Глобальная функция подтверждения
+        function confirmAction(url) {
+            document.getElementById('confirmActionBtn').href = url;
+            new bootstrap.Modal(document.getElementById('confirmModal')).show();
+        }
+
+        // Закон 103: Обработка AJAX ошибок
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Ошибка системы:', event.reason);
+            // Тут можно добавить всплывающее уведомление
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
