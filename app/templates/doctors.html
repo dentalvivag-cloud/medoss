@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+
+{% block title %}Управление персоналом | MEDOS PRO{% endblock %}
+{% block breadcrumb %}Настройки / Врачи клиники{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0 text-dark">Врачи клиники</h2>
+        <!-- Фильтр периодов для анализа эффективности (Закон №32) -->
+        <div class="bg-white p-2 rounded-pill shadow-sm border">
+            <div class="btn-group">
+                <a href="{{ url_for('main.doctors_list', period='today') }}" 
+                   class="btn btn-sm rounded-pill px-3 {{ 'btn-primary shadow' if period == 'today' else 'btn-light text-muted' }}">Сегодня</a>
+                <a href="{{ url_for('main.doctors_list', period='week') }}" 
+                   class="btn btn-sm rounded-pill px-3 {{ 'btn-primary shadow' if period == 'week' else 'btn-outline-primary' }}">Неделя</a>
+                <a href="{{ url_for('main.doctors_list', period='month') }}" 
+                   class="btn btn-sm rounded-pill px-3 {{ 'btn-primary shadow' if period == 'month' else 'btn-outline-primary' }}">Месяц</a>
+                <a href="{{ url_for('main.doctors_list', period='all') }}" 
+                   class="btn btn-sm rounded-pill px-3 {{ 'btn-primary shadow' if period == 'all' else 'btn-outline-primary' }}">Все время</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Форма добавления нового сотрудника (Закон №47: Ввод данных) -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 20px;">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-person-plus text-primary me-2"></i>Добавить врача</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('main.add_doctor') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">ФИО СПЕЦИАЛИСТА</label>
+                            <input type="text" name="full_name" class="form-control rounded-3 border-light bg-light" placeholder="Иванов Иван Иванович" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">СПЕЦИАЛИЗАЦИЯ</label>
+                            <input type="text" name="specialization" class="form-control rounded-3 border-light bg-light" placeholder="Стоматолог-терапевт">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">ТЕЛЕФОН</label>
+                            <input type="text" name="phone" class="form-control rounded-3 border-light bg-light" placeholder="+998 ...">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow">
+                            ЗАРЕГИСТРИРОВАТЬ
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Таблица статистики и управления (Закон №17: Аналитика) -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr class="text-secondary small text-uppercase">
+                                <th class="ps-4 py-3">Специалист</th>
+                                <th>Специализация</th>
+                                <th class="text-end">Приход ({{ period }})</th>
+                                <th class="text-end pe-4">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white">
+                            {% for item in stats %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 40px; height: 40px;">
+                                            {{ item.doc.full_name[0] }}
+                                        </div>
+                                        <div>
+                                            <span class="fw-bold text-dark d-block">{{ item.doc.full_name }}</span>
+                                            <small class="text-muted">{{ item.doc.phone or 'Нет телефона' }}[cite: 13]</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border font-weight-normal px-3 py-2 rounded-pill">
+                                        {{ item.doc.specialization or 'Общий профиль' }}[cite: 13]
+                                    </span>
+                                </td>
+                                <td class="text-end fw-bold text-success">
+                                    {{ "{:,.0f}".format(item.income) }} сум[cite: 13]
+                                </td>
+                                <td class="text-end pe-4">
+                                    <!-- Опасное действие с подтверждением (Закон №9)[cite: 13] -->
+                                    <a href="{{ url_for('main.delete_doctor', id=item.doc.id) }}" 
+                                       class="btn btn-sm btn-outline-danger border-0 rounded-circle" 
+                                       onclick="return confirm('Внимание! Это удалит врача из системы. Продолжить?')">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="bi bi-person-badge display-4 opacity-25 d-block mb-3"></i>
+                                    Список врачей пока пуст.[cite: 13]
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Пояснительная записка (Закон №6) -->
+            <div class="mt-4 p-3 bg-primary bg-opacity-10 rounded-4 border border-primary border-opacity-10">
+                <small class="text-primary fw-bold"><i class="bi bi-info-circle me-1"></i> Как это работает?</small>
+                <p class="small text-muted mb-0 mt-1">
+                    Доход рассчитывается на основе фактически оплаченных процедур, привязанных к конкретному врачу в журнале посещений за выбранный период времени.[cite: 13]
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

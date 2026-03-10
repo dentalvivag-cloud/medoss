@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+
+{% block title %}Статистика врачей | MEDOS PRO{% endblock %}
+{% block breadcrumb %}Финансы / Статистика{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Заголовок (Закон №6: Навигация) -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">Финансовая статистика персонала</h3>
+            <p class="text-muted small mb-0">Сравнение выполненных работ и фактических поступлений</p>
+        </div>
+        <button class="btn btn-outline-primary rounded-pill px-4 shadow-sm" onclick="window.print()">
+            <i class="bi bi-printer me-2"></i> Печать отчета
+        </button>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <!-- Таблица эффективности (Закон №46: Ресурсное планирование) -->
+            <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-person-badge me-2"></i>Эффективность врачей</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr class="small text-uppercase text-secondary">
+                                <th class="ps-4 py-3">Врач</th>
+                                <th class="text-end">Работа (Месяц)</th>
+                                <th class="text-end">Касса (Месяц)</th>
+                                <th class="text-end bg-secondary bg-opacity-10">Работа (Всего)</th>
+                                <th class="text-end bg-secondary bg-opacity-10">Касса (Всего)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in stats %}
+                            <tr>
+                                <td class="ps-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm me-3 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 35px; height: 35px;">
+                                            {{ s.name[:1] }}
+                                        </div>
+                                        <span class="fw-bold text-dark">{{ s.name }}</span>
+                                    </div>
+                                </td>
+                                <!-- Месячные показатели (Закон №32: Метрики) -->
+                                <td class="text-end text-primary fw-bold">{{ "{:,.0f}".format(s.month_work) }}</td>
+                                <td class="text-end text-success fw-bold">
+                                    <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                                        +{{ "{:,.0f}".format(s.month_cash) }}
+                                    </span>
+                                </td>
+                                <!-- Исторические показатели -->
+                                <td class="text-end text-muted bg-secondary bg-opacity-10">{{ "{:,.0f}".format(s.total_work) }}</td>
+                                <td class="text-end text-muted bg-secondary bg-opacity-10">{{ "{:,.0f}".format(s.total_cash) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-clipboard-x d-block fs-1 opacity-25 mb-3"></i>
+                                    Данные для статистики пока не накоплены
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Футер карточки (Закон №17: Связность данных)[cite: 8] -->
+                <div class="card-footer bg-white border-0 py-3 text-center">
+                    <small class="text-muted">Данные обновляются в режиме реального времени на основе закрытых приемов и внесенных оплат.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Стили для печати отчета */
+    @media print {
+        .btn, .breadcrumb, .sidebar, .navbar { display: none !important; }
+        .card { shadow: none !important; border: 1px solid #eee !important; }
+        body { background: white !important; }
+    }
+</style>
+{% endblock %}

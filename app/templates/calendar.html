@@ -1,0 +1,205 @@
+{% extends "layout.html" %}
+
+{% block title %}График приемов | Логика 105{% endblock %}
+
+{% block styles %}
+<style>
+    :root { --fc-today-bg-color: rgba(52, 152, 219, 0.05); }
+    #calendar { 
+        background: white; padding: 20px; border-radius: 20px; 
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08); border: 1px solid #edf2f7;
+    }
+    .fc-event { cursor: pointer; border: none !important; border-radius: 8px !important; transition: all 0.2s; }
+    .fc-event:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .fc-resource-area { width: 220px !important; background: #f8fafc; font-weight: 700; }
+    .fc-timegrid-slot { height: 4rem !important; border-bottom: 1px solid #f1f5f9 !important; }
+    .modal-content { border-radius: 25px !important; overflow: hidden; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Панель управления -->
+    <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+        <div>
+            <h2 class="h3 fw-bold mb-1">Управление потоком</h2>
+            <div id="syncStatus" class="text-success small"><i class="bi bi-patch-check-fill"></i> Система синхронизирована</div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-light rounded-pill border shadow-sm px-4" onclick="location.reload()">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button class="btn btn-primary rounded-pill shadow px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#appointmentModal">
+                <i class="bi bi-plus-lg me-2"></i> Записать пациента
+            </button>
+        </div>
+    </div>
+
+    <div id="calendar"></div>
+</div>
+
+<!-- Единое модальное окно (Логика 105) -->
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form action="{{ url_for('main.add_appointment') }}" method="POST" class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0 py-3 px-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2"></i>Новая запись</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <!-- Левая колонка: КТО -->
+                    <div class="col-md-6 border-end">
+                        <label class="form-label small fw-bold text-uppercase text-primary">Пациент</label>
+                        <select name="patient_id" id="patient_select" class="form-select bg-light border-0 py-2 mb-3">
+                            <option value="">-- Новый пациент --</option>
+                            {% for p in patients %}
+                            <option value="{{ p.id }}">{{ p.full_name }} ({{ p.phone }})</option>
+                            {% endfor %}
+                        </select>
+
+                        <div id="new_patient_fields" class="p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-10">
+                            <h6 class="small fw-bold text-primary mb-3">РЕГИСТРАЦИЯ НОВОЙ КАРТЫ</h6>
+                            <input type="text" name="new_patient_name" class="form-control mb-2 border-0 shadow-sm" placeholder="ФИО пациента">
+                            <input type="text" name="new_patient_phone" class="form-control border-0 shadow-sm" placeholder="Номер телефона">
+                        </div>
+                    </div>
+
+                    <!-- Правая колонка: КУДА/ЗАЧЕМ -->
+                    <div class="col-md-6">
+                        <div class="row g-2 mb-3">
+                            <div class="col-7">
+                                <label class="form-label small fw-bold text-muted">ВРАЧ</label>
+                                <select name="doctor_id" id="modal_doctor" class="form-select bg-light border-0" required>
+                                    {% for d in doctors %}
+                                    <option value="{{ d.id }}">Dr. {{ d.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-5">
+                                <label class="form-label small fw-bold text-muted">ЗУБ №</label>
+                                <input type="text" name="tooth_number" class="form-control bg-light border-0" placeholder="№">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">ДАТА</label>
+                                <input type="date" name="date" id="modal_date" class="form-control bg-light border-0" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">ВРЕМЯ</label>
+                                <input type="time" name="start_time" id="modal_start" class="form-control bg-light border-0" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">УСЛУГА И СТОИМОСТЬ</label>
+                            <div class="input-group">
+                                <select name="service_id" class="form-select bg-light border-0">
+                                    <option value="">Консультация</option>
+                                    {% for s in services %}
+                                    <option value="{{ s.id }}">{{ s.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="number" name="price" class="form-control bg-light border-0" placeholder="Сумма">
+                            </div>
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="form-label small fw-bold text-muted">ЖАЛОБЫ</label>
+                            <textarea name="complaint" class="form-control bg-light border-0" rows="2" placeholder="Краткое описание..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow">
+                    ПОДТВЕРДИТЬ ЗАПИСЬ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ru.js'></script>
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const pSelect = document.getElementById('patient_select');
+    const newPFields = document.getElementById('new_patient_fields');
+
+    // Логика переключения: если пациент не выбран, показываем поля регистрации
+    pSelect.addEventListener('change', function() {
+        if(this.value === "") {
+            newPFields.style.opacity = "1";
+            newPFields.classList.remove('d-none');
+        } else {
+            newPFields.style.opacity = "0.5"; // Просто затемняем или d-none
+        }
+    });
+
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'resourceTimeGridDay', // Вид по врачам
+        locale: 'ru',
+        slotMinTime: '08:00:00',
+        slotMaxTime: '21:00:00',
+        editable: true,
+        selectable: true,
+        nowIndicator: true,
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'resourceTimeGridDay,timeGridWeek'
+        },
+        resources: [
+            {% for d in doctors %}
+            { id: '{{ d.id }}', title: 'Dr. {{ d.full_name }}' },
+            {% endfor %}
+        ],
+        events: '/api/appointments',
+
+        // Клик по пустому месту — Запись (Логика 105)
+        select: function(info) {
+            document.getElementById('modal_date').value = info.startStr.split('T')[0];
+            document.getElementById('modal_start').value = info.startStr.split('T')[1].substring(0,5);
+            if(info.resource) {
+                document.getElementById('modal_doctor').value = info.resource.id;
+            }
+            new bootstrap.Modal(document.getElementById('appointmentModal')).show();
+        },
+
+        // Клик по событию — Переход в карту (Паутина данных)
+        eventClick: function(info) {
+            window.location.href = '/patient/' + info.event.extendedProps.patient_id;
+        },
+
+        // Drag-and-Drop
+        eventDrop: function(info) { updateAppointment(info.event); }
+    });
+
+    calendar.render();
+
+    function updateAppointment(event) {
+        fetch('/api/move_appointment', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id: event.id,
+                start: event.start.toISOString(),
+                doctor_id: event.getResources()[0].id
+            })
+        }).then(r => r.json()).then(data => {
+            if(data.status !== 'success') location.reload();
+        });
+    }
+});
+</script>
+{% endblock %}

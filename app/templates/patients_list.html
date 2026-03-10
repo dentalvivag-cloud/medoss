@@ -1,0 +1,187 @@
+{% extends "layout.html" %}
+
+{% block title %}MEDOS | Список пациентов{% endblock %}
+{% block breadcrumb %}Пациенты / Реестр{% endblock %}
+{% block page_title %}Реестр пациентов{% endblock %}
+
+{% block content %}
+<style>
+    /* Premium Table Styling (Закон №9: Идентичность) */
+    .patient-card-table { border-radius: 15px; overflow: hidden; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .avatar-sm { transition: transform 0.2s; }
+    .patient-row:hover .avatar-sm { transform: scale(1.1); }
+    .search-group { background: #f8f9fa; border-radius: 50px; padding: 5px 15px; transition: all 0.3s; }
+    .search-group:focus-within { background: #fff; box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15); }
+    .status-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 50px; font-weight: 700; }
+</style>
+
+<div class="container-fluid py-2">
+    <!-- Action Bar (Закон №6: Навигация) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body py-3">
+            <div class="row g-3 align-items-center">
+                <!-- Живой поиск -->
+                <div class="col-md-5">
+                    <div class="search-group d-flex align-items-center">
+                        <i class="bi bi-search text-primary me-2"></i>
+                        <input type="text" id="patientSearch" class="form-control border-0 bg-transparent shadow-none" placeholder="Поиск по имени, телефону или ID...">
+                    </div>
+                </div>
+                <!-- Умные фильтры (Закон №32: Метрики) -->
+                <div class="col-md-4">
+                    <div class="d-flex gap-2">
+                        <select id="debtFilter" class="form-select rounded-pill border-light bg-light small fw-bold">
+                            <option value="all">📊 Все статусы</option>
+                            <option value="debtors">⚠️ Только должники</option>
+                            <option value="clean">✅ Без долгов</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Кнопка создания -->
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+                        <i class="bi bi-person-plus-fill me-2"></i> Регистрация
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таблица (Закон №17: Связность данных) -->
+    <div class="card patient-card-table">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="patientsTable">
+                <thead class="bg-light text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4 py-3">Пациент</th>
+                        <th>Контактные данные</th>
+                        <th>Дата рождения</th>
+                        <th>Финансовый баланс</th>
+                        <th class="pe-4 text-end">Управление</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white">
+                    {% for p in patients %}
+                    <tr class="patient-row animate-item" data-debt="{{ 'true' if (p.balance or 0) < 0 else 'false' }}">
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-3 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 42px; height: 42px;">
+                                    {{ p.full_name[0] }}
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('main.patient_card', id=p.id) }}" class="fw-bold text-dark text-decoration-none d-block">
+                                        {{ p.full_name }}
+                                    </a>
+                                    <small class="text-muted">Карта №{{ p.id }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small"><i class="bi bi-telephone-outbound me-2 text-primary"></i>{{ p.phone }}</div>
+                        </td>
+                        <td class="text-secondary small">
+                            {{ p.birth_date.strftime('%d.%m.%Y') if p.birth_date else '—' }}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <span class="fw-bold {% if (p.balance or 0) < 0 %}text-danger{% elif (p.balance or 0) > 0 %}text-success{% else %}text-muted{% endif %} me-2">
+                                    {{ "{:,.0f}".format(p.balance or 0) }} сум
+                                </span>
+                                {% if (p.balance or 0) < 0 %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger status-badge">ДОЛГ</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="btn-group">
+                                <a href="{{ url_for('main.patient_card', id=p.id) }}" class="btn btn-sm btn-light border fw-bold rounded-pill px-3 me-2">
+                                    Открыть карту
+                                </a>
+                                <button class="btn btn-sm btn-light border rounded-circle shadow-sm" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3">
+                                    <li><a class="dropdown-item py-2" href="{{ url_for('main.patient_card', id=p.id) }}"><i class="bi bi-pencil me-2 text-primary"></i> Редактировать</a></li>
+                                    <li><a class="dropdown-item py-2" href="{{ url_for('main.calendar_view') }}"><i class="bi bi-calendar-event me-2 text-success"></i> Записать на прием</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item py-2 text-danger" href="#"><i class="bi bi-trash me-2"></i> Удалить из базы</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="py-4">
+                                <i class="bi bi-people text-light display-1"></i>
+                                <h5 class="text-muted mt-3">Пациентов пока нет</h5>
+                                <p class="small text-secondary">Нажмите "Регистрация", чтобы добавить первого пациента</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно регистрации (Закон №11: Интуитивность)[cite: 8] -->
+<div class="modal fade" id="addPatientModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form action="{{ url_for('main.add_patient') }}" method="POST" class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white border-0 py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>Новая карточка</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">ФИО пациента</label>
+                    <input type="text" name="full_name" class="form-control form-control-lg border-0 bg-light rounded-3 shadow-none" placeholder="Ф.И.О." required>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Телефон</label>
+                        <input type="text" name="phone" class="form-control border-0 bg-light rounded-3 shadow-none" placeholder="+998 ..." required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Дата рождения</label>
+                        <input type="date" name="birth_date" class="form-control border-0 bg-light rounded-3 shadow-none">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow">СОЗДАТЬ ПАЦИЕНТА</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Унифицированная фильтрация (Поиск + Долги)[cite: 8]
+    const searchInput = document.getElementById('patientSearch');
+    const debtFilter = document.getElementById('debtFilter');
+    const rows = document.querySelectorAll('.patient-row');
+
+    function filterTable() {
+        const searchText = searchInput.value.toLowerCase();
+        const debtStatus = debtFilter.value;
+
+        rows.forEach(row => {
+            const textMatch = row.innerText.toLowerCase().includes(searchText);
+            const isDebtor = row.getAttribute('data-debt') === 'true';
+            
+            let debtMatch = true;
+            if (debtStatus === 'debtors') debtMatch = isDebtor;
+            if (debtStatus === 'clean') debtMatch = !isDebtor;
+
+            row.style.display = (textMatch && debtMatch) ? '' : 'none';
+        });
+    }
+
+    searchInput.addEventListener('input', filterTable);
+    debtFilter.addEventListener('change', filterTable);
+</script>
+{% endblock %}

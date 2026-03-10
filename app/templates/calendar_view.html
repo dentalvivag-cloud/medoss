@@ -1,0 +1,99 @@
+{% extends "layout.html" %}
+
+{% block title %}Календарь записей | MEDOS PRO{% endblock %}
+{% block breadcrumb %}Операции / Календарь за {{ month_name }} {{ year }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 h-100 flex-column d-flex">
+    <!-- Навигация по календарю (Закон №7: Контекст) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded-4 shadow-sm border">
+        <div class="d-flex align-items-center">
+            <h2 class="fw-bold mb-0 text-dark me-3">{{ month_name }} {{ year }}</h2>
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2">
+                <i class="bi bi-calendar3 me-1"></i> Режим просмотра: Месяц
+            </span>
+        </div>
+        
+        <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+            {% set prev_month = month - 1 if month > 1 else 12 %}
+            {% set prev_year = year if month > 1 else year - 1 %}
+            {% set next_month = month + 1 if month < 12 else 1 %}
+            {% set next_year = year if month < 12 else year + 1 %}
+            
+            <a href="{{ url_for('main.calendar_view', month=prev_month, year=prev_year) }}" class="btn btn-white border-end px-3">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <a href="{{ url_for('main.calendar_view', month=today.month, year=today.year) }}" class="btn btn-white px-4 fw-bold text-primary">
+                Сегодня
+            </a>
+            <a href="{{ url_for('main.calendar_view', month=next_month, year=next_year) }}" class="btn btn-white border-start px-3">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Сетка календаря (Закон №17: Информативность) -->
+    <div class="flex-grow-1 bg-white rounded-4 shadow-sm border p-4 overflow-auto">
+        <div class="row g-2 text-center mb-2">
+            {% for day_name in ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] %}
+            <div class="col font-bold text-muted small text-uppercase py-2 fw-bold" style="letter-spacing: 1px;">
+                {{ day_name }}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% for week in calendar %}
+        <div class="row g-2 mb-2" style="min-height: 120px;">
+            {% for day in week %}
+            <div class="col">
+                {% if day == 0 %}
+                <div class="h-100 bg-light bg-opacity-50 rounded-3 border border-dashed"></div>
+                {% else %}
+                    {% set count = daily_counts.get(day, 0) %}
+                    {% set date_str = "{}-{:02d}-{:02d}".format(year, month, day) %}
+                    {% set is_today = (day == today.day and month == today.month and year == today.year) %}
+
+                    <a href="{{ url_for('main.calendar_day', date_str=date_str) }}" 
+                       class="h-100 w-100 border rounded-3 p-2 d-flex flex-column justify-content-between text-decoration-none transition-all calendar-card
+                       {{ 'bg-primary bg-opacity-10 border-primary' if is_today else 'bg-white hover-shadow border-light' }}">
+                        
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="fs-5 fw-bold {{ 'text-primary' if is_today else 'text-dark' }}">{{ day }}</span>
+                            {% if is_today %}
+                            <span class="badge bg-primary small rounded-pill" style="font-size: 0.6rem;">СЕГОДНЯ</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if count > 0 %}
+                        <div class="text-end">
+                            <span class="badge bg-success bg-opacity-75 text-white border-0 px-2 py-1 rounded-pill" style="font-size: 0.75rem;">
+                                <i class="bi bi-person-check me-1"></i> {{ count }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Легенда (Закон №6: Обучение) -->
+    <div class="mt-3 d-flex gap-4 text-muted small">
+        <span><i class="bi bi-square-fill text-primary opacity-10 me-1"></i> Текущий день</span>
+        <span><i class="bi bi-circle-fill text-success opacity-75 me-1"></i> Наличие записей</span>
+        <span><i class="bi bi-mouse2 me-1"></i> Нажмите на день для управления расписанием</span>
+    </div>
+</div>
+
+<style>
+    .calendar-card { transition: all 0.2s ease-in-out; border-width: 2px !important; }
+    .calendar-card:hover { 
+        transform: translateY(-3px); 
+        border-color: #0d6efd !important; 
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+    }
+    .hover-shadow:hover { background-color: #f8f9fa; }
+</style>
+{% endblock %}

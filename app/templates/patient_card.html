@@ -1,0 +1,237 @@
+{% extends "layout.html" %}
+
+{% block title %}Карта: {{ patient.full_name }} | MEDOS PRO{% endblock %}
+{% block breadcrumb %}Пациенты / {{ patient.full_name }} / Формула{% endblock %}
+
+{% block styles %}
+<style>
+    /* Дизайн профиля (Закон №9: Идентичность) */
+    .patient-header {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        color: white; border-radius: 20px; padding: 25px;
+        box-shadow: 0 10px 20px rgba(52, 152, 219, 0.15);
+    }
+    
+    /* Интерактивная формула (Закон №18: Наглядность) */
+    .tooth-container { 
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; 
+        background: #ffffff; padding: 25px; border-radius: 20px; border: 1px solid #edf2f7;
+    }
+    .tooth-item { 
+        width: 42px; cursor: pointer; transition: all 0.2s ease; 
+        position: relative; text-align: center;
+    }
+    .tooth-item:hover { transform: scale(1.2); z-index: 10; }
+    .tooth-item svg { 
+        width: 100%; height: auto; stroke: #4a5568; stroke-width: 1.5; 
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+    }
+    .tooth-number { font-size: 11px; font-weight: 800; color: #718096; display: block; margin-top: 4px; }
+    
+    /* Состояния зубов (Закон №52: Стандартизация) */
+    .status-healthy svg { fill: #ffffff; }     /* Здоровый */
+    .status-caries svg { fill: #f6ad55; }      /* Кариес (Оранжевый) */
+    .status-pulpitis svg { fill: #f56565; }    /* Пульпит (Красный) */
+    .status-crown svg { fill: #b794f4; }       /* Коронка (Фиолетовый) */
+    .status-implant svg { fill: #4a5568; }     /* Имплант (Антрацит) */
+    .status-missing svg { fill: #e2e8f0; opacity: 0.3; } /* Отсутствует */
+
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .table-custom thead { background-color: #f8fafc; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <!-- Шапка профиля пациента[cite: 10] -->
+    <div class="patient-header mb-4 shadow-sm">
+        <div class="row align-items-center">
+            <div class="col-md-auto">
+                <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 70px; height: 70px; font-size: 1.8rem;">
+                    {{ patient.full_name[0] }}
+                </div>
+            </div>
+            <div class="col-md">
+                <h2 class="fw-bold mb-1">{{ patient.full_name }}</h2>
+                <div class="d-flex gap-3 opacity-75 small">
+                    <span><i class="bi bi-telephone-fill me-1"></i> {{ patient.phone }}</span>
+                    <span><i class="bi bi-calendar3 me-1"></i> {{ patient.birth_date.strftime('%d.%m.%Y') if patient.birth_date else 'Дата не указана' }}</span>
+                </div>
+            </div>
+            <div class="col-md-auto text-end mt-3 mt-md-0">
+                <div class="bg-white bg-opacity-20 p-3 rounded-4 border border-white border-opacity-25 shadow-sm">
+                    <small class="d-block text-uppercase fw-bold opacity-75 mb-1" style="font-size: 0.65rem;">Баланс пациента</small>
+                    <h3 class="fw-bold mb-0 {% if (patient.balance or 0) < 0 %}text-warning{% endif %}">
+                        {{ "{:,.0f}".format(patient.balance or 0) }} сум
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- Интерактивная зубная формула[cite: 10] -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-secondary"><i class="bi bi-grid-3x3-gap text-primary me-2"></i>Зубная формула</h5>
+                    <div id="saveStatus" class="small text-muted"><i class="bi bi-check-all"></i> Актуально</div>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div class="tooth-container shadow-sm">
+                        <!-- Верхняя челюсть[cite: 10] -->
+                        <div class="d-flex justify-content-center w-100 mb-4 pb-3 border-bottom border-light">
+                            {% for n in [18,17,16,15,14,13,12,11] %}{{ tooth_macro(n) }}{% endfor %}
+                            <div class="mx-3 border-start"></div>
+                            {% for n in [21,22,23,24,25,26,27,28] %}{{ tooth_macro(n) }}{% endfor %}
+                        </div>
+                        <!-- Нижняя челюсть[cite: 10] -->
+                        <div class="d-flex justify-content-center w-100">
+                            {% for n in [48,47,46,45,44,43,42,41] %}{{ tooth_macro(n) }}{% endfor %}
+                            <div class="mx-3 border-start"></div>
+                            {% for n in [31,32,33,34,35,36,37,38] %}{{ tooth_macro(n) }}{% endfor %}
+                        </div>
+                    </div>
+                    <div class="mt-3 d-flex flex-wrap justify-content-center gap-3 small text-muted">
+                        <span><span class="status-dot" style="background: #f6ad55"></span> Кариес</span>
+                        <span><span class="status-dot" style="background: #f56565"></span> Пульпит</span>
+                        <span><span class="status-dot" style="background: #b794f4"></span> Коронка</span>
+                        <span><span class="status-dot" style="background: #4a5568"></span> Имплант</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- История посещений -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between">
+                    <h5 class="fw-bold mb-0 text-secondary"><i class="bi bi-clock-history text-primary me-2"></i>История лечения</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle mb-0">
+                            <thead>
+                                <tr class="text-muted small text-uppercase">
+                                    <th class="ps-4 py-3">Дата</th>
+                                    <th>Зуб</th>
+                                    <th>Диагноз / Услуга</th>
+                                    <th>Стоимость</th>
+                                    <th class="pe-4 text-end">Действие</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appt in patient.appointments %}
+                                <tr>
+                                    <td class="ps-4"><strong>{{ appt.start_time.strftime('%d.%m.%Y') }}</strong></td>
+                                    <td><span class="badge bg-primary bg-opacity-10 text-primary">№{{ appt.tooth_number or '--' }}</span></td>
+                                    <td><span class="small">{{ appt.description or 'Консультация' }}</span></td>
+                                    <td class="fw-bold">{{ "{:,.0f}".format(appt.price or 0) }} сум</td>
+                                    <td class="pe-4 text-end">
+                                        <button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="showPaymentModal({{ appt.id }})">
+                                            <i class="bi bi-cash-stack"></i> Оплата
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center py-5 text-muted">История посещений пуста</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Правый блок: Анамнез[cite: 10] -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0 text-secondary"><i class="bi bi-journal-text text-primary me-2"></i>Анамнез</h5>
+                </div>
+                <div class="card-body px-4">
+                    <form action="{{ url_for('main.update_patient', id=patient.id) }}" method="POST">
+                        <textarea name="notes" class="form-control border-0 bg-light p-3 mb-3 shadow-none" rows="12" 
+                                  style="border-radius: 15px; resize: none; font-size: 0.9rem;" 
+                                  placeholder="Аллергии, хронические заболевания...">{{ patient.notes or '' }}</textarea>
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold shadow-sm">
+                            <i class="bi bi-save me-2"></i>Сохранить изменения
+                        </button>
+                    </form>
+                    
+                    <div class="mt-4 p-3 bg-warning bg-opacity-10 rounded-4 border border-warning border-opacity-20">
+                        <h6 class="fw-bold text-warning small mb-2"><i class="bi bi-info-circle me-1"></i> Инструкция</h6>
+                        <p class="small text-muted mb-0">Нажимайте на зуб для изменения его статуса. Данные сохраняются автоматически[cite: 10].</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Макрос отрисовки зуба[cite: 10] -->
+{% macro tooth_macro(n) %}
+<div class="tooth-item status-healthy" id="tooth-{{ n }}" onclick="changeToothStatus({{ n }})">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M25,35 Q25,15 50,15 Q75,15 75,35 Q75,65 50,85 Q25,65 25,35 Z" />
+    </svg>
+    <span class="tooth-number">{{ n }}</span>
+</div>
+{% endmacro %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const statuses = ['status-healthy', 'status-caries', 'status-pulpitis', 'status-crown', 'status-implant', 'status-missing'];
+
+    function changeToothStatus(toothNum) {
+        const el = document.getElementById(`tooth-${toothNum}`);
+        let currentIdx = -1;
+        statuses.forEach((s, idx) => { if (el.classList.contains(s)) currentIdx = idx; });
+
+        el.classList.remove(statuses[currentIdx]);
+        const nextIdx = (currentIdx + 1) % statuses.length;
+        el.classList.add(statuses[nextIdx]);
+
+        saveTeethData();
+    }
+
+    function saveTeethData() {
+        const statusEl = document.getElementById('saveStatus');
+        statusEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
+        
+        const formula = {};
+        document.querySelectorAll('.tooth-item').forEach(el => {
+            const num = el.id.replace('tooth-', '');
+            const currentStatus = statuses.find(s => el.classList.contains(s));
+            formula[num] = currentStatus;
+        });
+
+        fetch(`/patient/{{ patient.id }}/save_teeth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formula: JSON.stringify(formula) })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) statusEl.innerHTML = '<i class="bi bi-check-all text-success"></i> Актуально';
+        });
+    }
+
+    // Инициализация формулы из базы данных[cite: 10]
+    document.addEventListener('DOMContentLoaded', function() {
+        const rawData = '{{ patient.tooth_formula | safe }}';
+        if (rawData && rawData !== "None" && rawData !== "") {
+            try {
+                const formula = JSON.parse(rawData);
+                for (const [num, status] of Object.entries(formula)) {
+                    const el = document.getElementById(`tooth-${num}`);
+                    if (el && statuses.includes(status)) {
+                        el.classList.remove('status-healthy');
+                        el.classList.add(status);
+                    }
+                }
+            } catch(e) { console.warn("Dental formula error"); }
+        }
+    });
+</script>
+{% endblock %}

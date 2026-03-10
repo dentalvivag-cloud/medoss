@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+
+{% block title %}Настройки системы | MEDOS PRO{% endblock %}
+{% block breadcrumb %}Администрирование / Обслуживание базы{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0 text-dark">Настройки системы</h2>
+            <p class="text-muted mb-0">Управление безопасностью и экспорт данных</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Блок резервного копирования (Закон №41: Безопасность) -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-primary text-white border-0 py-3 rounded-top-4">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2"></i>Резервное копирование</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="small text-muted mb-4">
+                        Регулярно скачивайте копию базы данных, чтобы защитить информацию о пациентах от непредвиденных сбоев.
+                    </p>
+                    <div class="d-grid gap-3">
+                        <a href="{{ url_for('main.export_db') }}" class="btn btn-outline-primary py-3 rounded-pill fw-bold shadow-sm">
+                            <i class="bi bi-database-down me-2"></i> Скачать базу (SQLite)[cite: 16]
+                        </a>
+                        <a href="{{ url_for('main.export_csv') }}" class="btn btn-outline-success py-3 rounded-pill fw-bold shadow-sm">
+                            <i class="bi bi-file-earmark-excel me-2"></i> Экспорт в Excel (CSV)[cite: 16]
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light border-0 py-3 px-4 rounded-bottom-4">
+                    <small class="text-primary"><i class="bi bi-info-circle me-1"></i> Рекомендуется делать копию раз в неделю.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Блок истории изменений (Закон №17: Логирование)[cite: 16] -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-secondary text-white border-0 py-3 rounded-top-4">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Последние файлы</h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for f in files[:5] %}
+                        <li class="list-group-item px-4 py-3 border-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-file-check text-success me-2"></i>
+                                <span class="text-dark">{{ f }}</span>[cite: 16]
+                            </div>
+                            <span class="badge bg-light text-muted fw-normal">Готов</span>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item px-4 py-5 text-center text-muted">
+                            <i class="bi bi-folder2-open display-4 opacity-25 d-block mb-3"></i>
+                            История экспорта пуста[cite: 16]
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card { transition: transform 0.2s; }
+    .card:hover { transform: translateY(-5px); }
+</style>
+{% endblock %}

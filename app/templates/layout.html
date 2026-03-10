@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MEDOS PRO | {% block title %}{% endblock %}</title>
+    
+    <!-- Фавикон и стили (Закон №9) -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Ядро скриптов (Закон №101: Синхронность) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.10/index.global.min.js'></script>
+    
+    <style>
+        :root { 
+            --sidebar-width: 260px; 
+            --primary: #2c3e50; 
+            --accent: #3498db; 
+            --bg-light: #f4f6f9; 
+            --success: #2ecc71;
+        }
+        body { background: var(--bg-light); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+        
+        /* Sidebar (Закон №6) */
+        .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; left: 0; top: 0; background: var(--primary); color: white; transition: 0.3s; z-index: 1040; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .sidebar .logo { padding: 25px 20px; font-size: 1.5rem; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); letter-spacing: 1.5px; color: #fff; text-transform: uppercase; }
+        .sidebar a { display: block; padding: 12px 20px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 1rem; transition: 0.2s; border-left: 4px solid transparent; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--accent); }
+        .sidebar i { margin-right: 12px; font-size: 1.2rem; vertical-align: middle; }
+        
+        /* Main Content */
+        .content { margin-left: var(--sidebar-width); padding: 25px; min-height: 100vh; transition: 0.3s; padding-top: 20px; }
+        
+        /* Mobile UI (Закон №7) */
+        .mobile-header { display: none; position: fixed; top: 0; left: 0; right: 0; height: 65px; background: var(--primary); color: white; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1030; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1035; opacity: 0; transition: 0.3s; backdrop-filter: blur(2px); }
+        
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .content { margin-left: 0; padding: 15px; padding-top: 80px; }
+            .mobile-header { display: flex; }
+            .overlay.active { display: block; opacity: 1; }
+        }
+        
+        /* Card & UI Styles */
+        .card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .btn-primary { background-color: var(--accent); border: none; font-weight: 600; border-radius: 10px; padding: 10px 20px; }
+        .btn-primary:hover { background-color: #2980b9; transform: translateY(-1px); }
+        .status-dot { height: 10px; width: 10px; background-color: var(--success); border-radius: 50%; display: inline-block; margin-right: 5px; }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <!-- Мобильная шапка (Закон №7) -->
+    <div class="mobile-header">
+        <h4 class="mb-0 fw-bold">MEDOS PRO</h4>
+        <button class="btn btn-link text-white p-0 fs-2" onclick="toggleSidebar()">
+            <i class="bi bi-list"></i>
+        </button>
+    </div>
+    
+    <!-- Оверлей для мобильного меню -->
+    <div class="overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Боковая панель (Закон №6) -->
+    <nav class="sidebar" id="mainSidebar">
+        <div class="logo">MEDOS PRO</div>
+        <div class="mt-4">
+            <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.endpoint == 'main.dashboard' else '' }}">
+                <i class="bi bi-speedometer2"></i> Дашборд
+            </a>
+            <a href="{{ url_for('main.calendar_view') }}" class="{{ 'active' if request.endpoint == 'main.calendar_view' else '' }}">
+                <i class="bi bi-calendar3"></i> Календарь
+            </a>
+            <a href="{{ url_for('main.patients_list') }}" class="{{ 'active' if request.endpoint == 'main.patients_list' else '' }}">
+                <i class="bi bi-people"></i> Пациенты
+            </a>
+            <a href="{{ url_for('main.doctors_list') }}" class="{{ 'active' if request.endpoint == 'main.doctors_list' else '' }}">
+                <i class="bi bi-person-vcard"></i> Врачи
+            </a>
+
+            <div class="my-3 mx-4 border-top border-secondary opacity-25"></div>
+            
+            <small class="px-4 text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Бизнес</small>
+            <a href="{{ url_for('main.analytics_view') }}" class="{{ 'active' if request.endpoint == 'main.analytics_view' else '' }} text-warning">
+                <i class="bi bi-graph-up-arrow"></i> Аналитика
+            </a>
+            <a href="{{ url_for('main.services_list') }}" class="{{ 'active' if request.endpoint == 'main.services_list' else '' }}">
+                <i class="bi bi-layers"></i> Прайс-лист
+            </a>
+
+            <div class="my-3 mx-4 border-top border-secondary opacity-25"></div>
+            
+            <a href="{{ url_for('main.settings') }}" class="{{ 'active' if request.endpoint == 'main.settings' else '' }}">
+                <i class="bi bi-gear"></i> Настройки
+            </a>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <main class="content">
+        <!-- Десктопная шапка страницы -->
+        <div class="d-none d-lg-flex justify-content-between align-items-center mb-4">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-1">
+                        <li class="breadcrumb-item small"><a href="/">Система</a></li>
+                        <li class="breadcrumb-item small active" aria-current="page">{% block breadcrumb %}{% endblock %}</li>
+                    </ol>
+                </nav>
+                <h3 class="fw-bold text-secondary mb-0">{% block page_title %}{% endblock %}</h3>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#quickApptModal">
+                    <i class="bi bi-plus-circle me-2"></i> Быстрая запись
+                </button>
+            </div>
+        </div>
+
+        <!-- Контейнер для всплывающих уведомлений (Закон №86) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Скрипты управления UI -->
+    <script>
+        function toggleSidebar() { 
+            document.getElementById('mainSidebar').classList.toggle('active'); 
+            document.getElementById('sidebarOverlay').classList.toggle('active'); 
+        }
+        
+        // Авто-закрытие меню при клике на мобилках
+        if (window.innerWidth < 992) {
+            document.querySelectorAll('.sidebar a').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (document.getElementById('mainSidebar').classList.contains('active')) {
+                        toggleSidebar();
+                    }
+                });
+            });
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

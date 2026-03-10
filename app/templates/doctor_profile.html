@@ -1,0 +1,189 @@
+{% extends "layout.html" %}
+
+{% block title %}Профиль: {{ doctor.full_name }}{% endblock %}
+{% block breadcrumb %}Врачи / {{ doctor.full_name }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Premium UI Components (Закон №9: Идентичность) */
+    .doctor-header {
+        background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+        border-radius: 25px;
+        color: white;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .stat-badge-premium {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 15px;
+        backdrop-filter: blur(5px);
+    }
+    .doctor-card {
+        border-radius: 20px !important;
+        border: none !important;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+    .list-item-visit {
+        border-radius: 15px;
+        transition: all 0.2s;
+        border: 1px solid #f0f4f8;
+        margin-bottom: 10px;
+    }
+    .list-item-visit:hover {
+        background: #f8fbff;
+        border-color: #0d6efd;
+        transform: translateX(5px);
+    }
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        background: #0d6efd;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: 800;
+        box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3);
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Навигация назад (Закон №6: Связность) -->
+    <div class="mb-4">
+        <a href="{{ url_for('main.doctors_list') }}" class="btn btn-light border rounded-pill px-4 fw-bold shadow-sm">
+            <i class="bi bi-arrow-left text-primary"></i> К СПИСКУ ВРАЧЕЙ
+        </a>
+    </div>
+
+    <!-- Заголовок профиля с KPI (Закон №32: Метрики) -->
+    <div class="doctor-header mb-4 animate-item">
+        <div class="row align-items-center">
+            <div class="col-md-auto mb-3 mb-md-0 text-center">
+                <div class="profile-avatar mx-auto">
+                    {{ doctor.full_name[:1].upper() }}
+                </div>
+            </div>
+            <div class="col-md">
+                <h2 class="fw-bold mb-1">{{ doctor.full_name }}</h2>
+                <span class="badge bg-primary px-3 rounded-pill">{{ doctor.specialization or 'Специалист' }}</span>
+                <div class="mt-2 opacity-75 small">
+                    <i class="bi bi-telephone-fill me-1"></i> {{ doctor.phone or 'Телефон не указан' }}
+                </div>
+            </div>
+            <div class="col-md-auto">
+                <div class="row g-2">
+                    <div class="col-6 col-md-12">
+                        <div class="stat-badge-premium text-center">
+                            <small class="d-block text-uppercase opacity-50 fw-bold" style="font-size: 0.6rem;">Принесено дохода</small>
+                            <span class="fs-5 fw-bold text-success">{{ "{:,.0f}".format(total_income) }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-12">
+                        <div class="stat-badge-premium text-center">
+                            <small class="d-block text-uppercase opacity-50 fw-bold" style="font-size: 0.6rem;">Всего пациентов</small>
+                            <span class="fs-5 fw-bold">{{ appointments|length }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Редактирование данных (Закон №47: Быстрое управление) -->
+        <div class="col-md-4">
+            <div class="card doctor-card animate-item">
+                <div class="card-header bg-white border-0 py-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-gear-fill text-primary me-2"></i>НАСТРОЙКИ ПРОФИЛЯ</h6>
+                </div>
+                <div class="card-body pt-0">
+                    <form action="{{ url_for('main.update_doctor', id=doctor.id) }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">ФИО ВРАЧА</label>
+                            <input type="text" name="full_name" class="form-control rounded-3" value="{{ doctor.full_name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">СПЕЦИАЛИЗАЦИЯ</label>
+                            <input type="text" name="specialization" class="form-control rounded-3" value="{{ doctor.specialization or '' }}">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">КОНТАКТНЫЙ ТЕЛЕФОН</label>
+                            <input type="text" name="phone" class="form-control rounded-3" value="{{ doctor.phone or '' }}">
+                        </div>
+                        <button type="submit" class="btn btn-dark w-100 py-3 rounded-4 fw-bold shadow">
+                            СОХРАНИТЬ ИЗМЕНЕНИЯ
+                        </button>
+                    </form>
+                    
+                    <hr class="my-4 opacity-10">
+                    
+                    <button class="btn btn-outline-danger w-100 border-0 fw-bold" onclick="if(confirm('Удалить врача и все его данные?')){location.href='{{ url_for('main.sys_delete_doctor', id=doctor.id) }}'}">
+                        <i class="bi bi-person-x me-2"></i> УДАЛИТЬ ИЗ ШТАТА
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- История приемов (Закон №17: Информативность)[cite: 10] -->
+        <div class="col-md-8">
+            <div class="card doctor-card h-100 animate-item">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-calendar-check text-primary me-2"></i>ЖУРНАЛ ПРИЕМА</h6>
+                </div>
+                <div class="card-body">
+                    <div class="appointment-history">
+                        {% for appt in appointments %}
+                        <div class="list-item-visit p-3 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="date-box text-center me-3 px-2 py-1 bg-light rounded-3">
+                                    <div class="fw-bold text-dark mb-0">{{ appt.date.strftime('%d.%m') }}</div>
+                                    <div class="small text-muted" style="font-size: 0.6rem;">{{ appt.date.strftime('%Y') }}</div>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ appt.patient.full_name }}</div>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-clock me-1"></i> {{ appt.start_time.strftime('%H:%M') }} 
+                                        <span class="mx-2">|</span>
+                                        <i class="bi bi-tag me-1"></i> {{ appt.complaint or 'Прием' }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">{{ "{:,.0f}".format(appt.final_price) }}</div>
+                                <a href="{{ url_for('main.patient_card', id=appt.patient_id) }}" class="btn btn-sm btn-light border p-1 px-2 rounded-3 mt-1">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-x fs-1 opacity-25 d-block mb-3"></i>
+                            У врача пока нет проведенных приемов
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* Анимация появления элементов (Закон №104)[cite: 10] */
+    document.addEventListener("DOMContentLoaded", function() {
+        const items = document.querySelectorAll('.animate-item');
+        items.forEach((el, i) => {
+            el.style.opacity = "0";
+            el.style.transform = "translateY(15px)";
+            el.style.transition = "all 0.4s ease forwards";
+            setTimeout(() => {
+                el.style.opacity = "1";
+                el.style.transform = "translateY(0)";
+            }, i * 150);
+        });
+    });
+</script>
+{% endblock %}

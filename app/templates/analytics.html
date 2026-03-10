@@ -1,0 +1,190 @@
+{% extends "layout.html" %}
+
+{% block title %}Финансовая Аналитика | MEDOS PRO{% endblock %}
+{% block breadcrumb %}Аналитика{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Заголовок и Навигация (Закон №6: Навигация) -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">📊 Финансовая Аналитика</h2>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4 fw-bold">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+
+    <!-- Фильтр периода (Закон №32: Метрики) -->
+    <div class="card p-3 mb-4 border-0 shadow-sm bg-light rounded-4">
+        <form action="{{ url_for('main.analytics_view') }}" method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="small fw-bold text-uppercase text-muted mb-1">Начало периода:</label>
+                <input type="date" name="start_date" class="form-control rounded-3 border-0 shadow-sm" value="{{ start_date or '' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="small fw-bold text-uppercase text-muted mb-1">Конец периода:</label>
+                <input type="date" name="end_date" class="form-control rounded-3 border-0 shadow-sm" value="{{ end_date or '' }}" required>
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm">
+                    <i class="bi bi-funnel-fill me-1"></i> Применить фильтр
+                </button>
+                <a href="{{ url_for('main.analytics_view') }}" class="btn btn-white border px-4 rounded-pill fw-bold shadow-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Сбросить
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Итоговая сводка (Закон №28: Информативность) -->
+    <div class="alert alert-primary border-0 shadow-sm d-flex justify-content-between align-items-center p-4 mb-4 rounded-4">
+        <div>
+            <h5 class="mb-1 fw-bold"><i class="bi bi-calendar-range me-2"></i>Период: {{ period_name }}</h5>
+            <span class="opacity-75">Все финансовые операции за указанный промежуток</span>
+        </div>
+        <div class="text-end">
+            <small class="text-uppercase fw-bold opacity-75 d-block mb-1">Общая выручка</small>
+            <h2 class="mb-0 fw-bold">{{ "{:,.0f}".format(period_income) }} сум</h2>
+        </div>
+    </div>
+
+    <!-- KPI Карточки (Закон №26: Визуализация) -->
+    <div class="row g-3 mb-4 text-center">
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm border-start border-4 border-primary h-100 rounded-3">
+                <small class="text-muted fw-bold text-uppercase">Сегодня</small>
+                <h3 class="fw-bold text-primary mt-1 mb-0">{{ "{:,.0f}".format(income_today or 0) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm border-start border-4 border-success h-100 rounded-3">
+                <small class="text-muted fw-bold text-uppercase">Эта неделя</small>
+                <h3 class="fw-bold text-success mt-1 mb-0">{{ "{:,.0f}".format(income_week or 0) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm border-start border-4 border-warning h-100 rounded-3">
+                <small class="text-muted fw-bold text-uppercase">Этот месяц</small>
+                <h3 class="fw-bold text-warning mt-1 mb-0">{{ "{:,.0f}".format(income_month or 0) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm border-start border-4 border-info h-100 rounded-3">
+                <small class="text-muted fw-bold text-uppercase">Этот год</small>
+                <h3 class="fw-bold text-info mt-1 mb-0">{{ "{:,.0f}".format(income_year or 0) }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-3">
+        <!-- График динамики (Закон №9: Идентичность) -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm h-100 rounded-4">
+                <div class="card-header bg-white fw-bold py-3 border-0">
+                    <i class="bi bi-graph-up-arrow text-primary me-2"></i>Динамика поступлений
+                </div>
+                <div class="card-body" style="min-height: 350px;">
+                    <canvas id="incomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Топ врачей (Закон №56: Эффективность) -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden">
+                <div class="card-header bg-white fw-bold py-3 border-0 text-success">
+                    <i class="bi bi-person-check-fill me-2"></i>Рейтинг врачей
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for doc in top_doctors %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
+                        <div>
+                            <span class="fw-bold d-block">👨‍⚕️ {{ doc.name }}</span>
+                            <small class="text-muted">{{ doc.specialization or 'Общая стоматология' }}</small>
+                        </div>
+                        <span class="badge bg-success-soft text-success rounded-pill px-3 py-2 border border-success border-opacity-25 fw-bold">
+                            {{ "{:,.0f}".format(doc.cash) }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-muted text-center py-5 border-0">
+                        <i class="bi bi-inbox h1 d-block opacity-25 mb-3"></i>
+                        Данные об оплатах отсутствуют
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Подключение Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('incomeChart').getContext('2d');
+        
+        // Данные из бэкенда
+        const labels = {{ (dates or []) | tojson | safe }};
+        const dataValues = {{ (income_data or []) | tojson | safe }};
+        
+        new Chart(ctx, {
+            type: 'line', 
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Выручка (сум)',
+                    data: dataValues,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#0d6efd',
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        padding: 12,
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y.toLocaleString() + ' сум';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: {
+                            font: { weight: 'bold' },
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+<style>
+    .bg-success-soft { background-color: rgba(25, 135, 84, 0.1) !important; }
+    .form-control:focus { box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15); border-color: #0d6efd; }
+</style>
+{% endblock %}

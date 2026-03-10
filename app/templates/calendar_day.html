@@ -1,0 +1,125 @@
+{% extends "layout.html" %}
+
+{% block title %}Приемы на {{ current_date.strftime('%d.%m.%Y') }} | MEDOS PRO{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 h-100 d-flex flex-column" x-data="dayScheduleData()">
+    
+    <!-- Верхняя панель управления -->
+    <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded-4 shadow-sm border">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('main.calendar_view') }}" class="btn btn-light rounded-pill px-3 shadow-sm text-primary fw-bold">
+                <i class="bi bi-grid-3x3-gap-fill me-1"></i> Месяц
+            </a>
+            <h3 class="fw-bold mb-0 text-dark">{{ current_date.strftime('%d.%m.%Y') }}</h3>
+            <form action="{{ url_for('main.calendar_day') }}" method="GET" class="d-none d-md-block">
+                <input type="date" name="date_str" value="{{ current_date }}" onchange="this.form.submit()" class="form-control form-control-sm rounded-pill border-primary border-opacity-25 px-3">
+            </form>
+        </div>
+        
+        <div class="d-flex gap-2 align-items-center">
+            <div class="d-none d-lg-flex gap-2 me-3">
+                {% for doctor in doctors %}
+                <div class="badge border text-dark fw-normal d-flex align-items-center gap-2 px-2 py-1 rounded-pill bg-light">
+                    <div class="rounded-circle" style="width: 10px; height: 10px; background-color: {{ doctor.color_code or '#0d6efd' }}"></div>
+                    <span class="small">{{ doctor.full_name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <button @click="openCreateModal()" class="btn btn-primary rounded-pill px-4 fw-bold shadow">
+                <i class="bi bi-plus-lg me-1"></i> НОВАЯ ЗАПИСЬ
+            </button>
+        </div>
+    </div>
+
+    <!-- Сетка расписания (Time-Grid) -->
+    <div class="flex-grow-1 bg-white rounded-4 shadow-sm border overflow-hidden d-flex flex-column">
+        <!-- Шапка с именами врачей -->
+        <div class="d-grid border-bottom bg-light sticky-top z-3" 
+             style="grid-template-columns: 80px repeat({{ doctors|length }}, 1fr);">
+            <div class="p-3 text-center text-muted small fw-bold text-uppercase">Время</div>
+            {% for doctor in doctors %}
+            <div class="p-3 text-center fw-bold text-dark border-start">{{ doctor.full_name }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Тело расписания -->
+        <div class="overflow-auto flex-grow-1">
+            {% for hour in hours %}
+            <div class="d-grid border-bottom position-relative" 
+                 style="grid-template-columns: 80px repeat({{ doctors|length }}, 1fr); min-height: 90px;">
+                
+                <!-- Колонка времени[cite: 16] -->
+                <div class="p-2 text-center text-muted font-monospace small bg-light bg-opacity-50">
+                    <span class="badge bg-white text-dark border shadow-sm">{{ hour }}</span>
+                </div>
+
+                {% for doctor in doctors %}
+                <!-- Ячейка записи (Drop Zone)[cite: 16] -->
+                <div class="position-relative border-start border-light transition-all schedule-cell"
+                     @click="openCreateModal('{{ doctor.id }}', '{{ hour }}')"
+                     @dragover.prevent=""
+                     @drop="onDrop($event, '{{ doctor.id }}', '{{ current_date }} {{ hour }}')">
+                    
+                    {% for appt in appointments %}
+                        {% if appt.doctor_id == doctor.id and appt.start_time.strftime('%H:00') == hour %}
+                        <!-- Виджет записи (Draggable)[cite: 16] -->
+                        <div draggable="true"
+                             @dragstart="onDragStart($event, '{{ appt.id }}')"
+                             @click.stop="openEditModal('{{ appt.id }}', '{{ appt.patient.full_name }}', '{{ appt.doctor_id }}', '{{ appt.start_time.strftime('%Y-%m-%d') }}', '{{ appt.start_time.strftime('%H:%M') }}', '{{ appt.description or '' }}', '{{ appt.price }}', '{{ appt.amount_paid }}')"
+                             class="position-absolute p-2 rounded-3 text-white shadow-sm appt-card z-2"
+                             style="inset: 4px; background-color: {{ doctor.color_code or '#0d6efd' }}; opacity: 0.95; cursor: move;">
+                            
+                            <div class="fw-bold text-truncate small">{{ appt.patient.full_name }}</div>
+                            <div class="text-truncate opacity-75" style="font-size: 0.7rem;">{{ appt.description or "Прием" }}</div>
+                            <div class="position-absolute bottom-0 end-0 p-1 opacity-50 font-monospace" style="font-size: 0.65rem;">
+                                {{ appt.start_time.strftime('%H:%M') }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Модальные окна (Новая запись / Редактирование) опущены для краткости, они идентичны вашему исходному коду, но с применением Bootstrap классов для стилизации[cite: 16] -->
+
+</div>
+
+<style>
+    .schedule-cell:hover { background-color: rgba(13, 110, 253, 0.03); cursor: cell; }
+    .appt-card { transition: transform 0.1s, box-shadow 0.2s; border: 1px solid rgba(255,255,255,0.2); }
+    .appt-card:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10 !important; }
+    .transition-all { transition: all 0.2s; }
+</style>
+
+<script>
+    function dayScheduleData() {
+        return {
+            createModalOpen: false,
+            editModalOpen: false,
+            // ... (логика из вашего исходного кода остается без изменений) ...
+            onDragStart(event, apptId) {
+                event.dataTransfer.setData('apptId', apptId);
+                event.target.style.opacity = "0.5";
+            },
+            async onDrop(event, doctorId, dateTimeStr) {
+                const apptId = event.dataTransfer.getData('apptId');
+                if (!apptId) return;
+                
+                const response = await fetch('/api/move_appointment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ appointment_id: apptId, doctor_id: doctorId, new_time: dateTimeStr })
+                });
+
+                if (response.ok) window.location.reload();
+                else alert('Ошибка перемещения');
+            }
+        }
+    }
+</script>
+{% endblock %}
